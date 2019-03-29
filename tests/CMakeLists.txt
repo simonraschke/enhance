@@ -1,0 +1,11 @@
+find_package(Boost COMPONENTS unit_test_framework)
+
+if(${BOOST_FOUND})
+    message("found boost ${BOOST_VERSION}")
+else()
+    message(WARNING "boost not found")
+endif()
+add_executable(point_test point_test.cpp)
+target_link_libraries(point_test enhance boost_unit_test_framework)
+add_test(NAME Point COMMAND point_test)
+target_include_directories(point_test PUBLIC ../enhance/)
