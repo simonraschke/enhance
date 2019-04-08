@@ -28,23 +28,23 @@
 namespace enhance 
 { 
     template<typename T = float>
-    struct Point
+    struct Vector3d
         : public __internal::ArithmeticEnabler<T>
     {
-        Point();
-        Point(T value);
-        Point(T x, T y, T z);
+        Vector3d();
+        Vector3d(T value);
+        Vector3d(T x, T y, T z);
 
         template<typename U>
-        Point(const Point<U>& other);
+        Vector3d(const Vector3d<U>& other);
 
-        Point(const Point<T>& other) = default;
-        Point(Point<T>&& other) = default;
+        Vector3d(const Vector3d<T>& other) = default;
+        Vector3d(Vector3d<T>&& other) = default;
 
-        constexpr void swap( Point<T>& other ) noexcept(std::is_nothrow_swappable_v<T>);
+        constexpr void swap( Vector3d<T>& other ) noexcept(std::is_nothrow_swappable_v<T>);
 
-        Point<T>& operator=(const Point<T>& other) = default;;
-        Point<T>& operator=(Point<T> &&) = default;
+        Vector3d<T>& operator=(const Vector3d<T>& other) = default;;
+        Vector3d<T>& operator=(Vector3d<T> &&) = default;
 
         inline auto begin()         { return std::begin(data); };
         inline auto end()           { return std::end(data); };
@@ -61,14 +61,14 @@ namespace enhance
 
         // change data element wise directly
         template<typename UNARY_FUNCTOR>
-        void unaryApply(const UNARY_FUNCTOR& unary);
+        void unaryApply(UNARY_FUNCTOR&& unary);
 
         // make a copy of data, change copy and return copy
         template<typename UNARY_FUNCTOR>
-        const Point<T> unaryExpr(const UNARY_FUNCTOR& unary) const;
+        const Vector3d<T> unaryExpr(UNARY_FUNCTOR&& unary) const;
 
         template<typename U>
-        Point<U> cast() const;
+        Vector3d<U> cast() const;
 
         T& operator[](std::size_t i);
         constexpr T operator[](std::size_t i) const;
@@ -77,28 +77,28 @@ namespace enhance
         constexpr T operator()(std::size_t i) const;
         
         template<typename U>
-        const Point<T> operator+(const Point<U>& other) const;
+        const Vector3d<T> operator+(const Vector3d<U>& other) const;
         
         template<typename U>
-        const Point<T> operator-(const Point<U>& other) const;
+        const Vector3d<T> operator-(const Vector3d<U>& other) const;
         
-        const Point<T> operator-() const;
-        
-        template<typename U>
-        Point<T>& operator+=(const Point<U>& other);
+        const Vector3d<T> operator-() const;
         
         template<typename U>
-        Point<T>& operator-=(const Point<U>& other);
+        Vector3d<T>& operator+=(const Vector3d<U>& other);
+        
+        template<typename U>
+        Vector3d<T>& operator-=(const Vector3d<U>& other);
 
         float norm() const;
         void normalize();
-        Point<T> normalized() const;
+        Vector3d<T> normalized() const;
 
         template<typename U>
-        T dot(const Point<U>& other) const;
+        T dot(const Vector3d<U>& other) const;
 
         template<typename U>
-        Point<T> cross(const Point<U>& other) const;
+        Vector3d<T> cross(const Vector3d<U>& other) const;
 
 
     protected:
@@ -108,7 +108,7 @@ namespace enhance
 
 
     template<typename T>
-    Point<T>::Point()
+    Vector3d<T>::Vector3d()
         : data(
         {
             static_cast<T>(0), 
@@ -122,7 +122,7 @@ namespace enhance
 
 
     template<typename T>
-    Point<T>::Point(T value)
+    Vector3d<T>::Vector3d(T value)
         : data({value, value, value})
     {
 
@@ -131,19 +131,27 @@ namespace enhance
 
 
     template<typename T>
-    Point<T>::Point(T x, T y, T z)
+    Vector3d<T>::Vector3d(T x, T y, T z)
         : data({x,y,z})
     {
 
+    }
+
+    
+    template<typename T>
+    template<typename U>
+    Vector3d<T>::Vector3d(const Vector3d<U>& other)
+    {
+        data = other.template cast<T>().data;
     }
 
 
 
     template<typename T>
     template<typename U>
-    Point<U> Point<T>::cast() const
+    Vector3d<U> Vector3d<T>::cast() const
     {
-        return Point<U>
+        return Vector3d<U>
         (
             static_cast<U>(data[0]),
             static_cast<U>(data[1]),
@@ -154,7 +162,7 @@ namespace enhance
 
 
     template<typename T>
-    constexpr void Point<T>::swap( Point<T>& other ) noexcept(std::is_nothrow_swappable_v<T>)
+    constexpr void Vector3d<T>::swap( Vector3d<T>& other ) noexcept(std::is_nothrow_swappable_v<T>)
     {
         data.swap(other.data);
     }
@@ -163,10 +171,10 @@ namespace enhance
 
     template<typename T>
     template<typename UNARY_FUNCTOR>
-    const Point<T> Point<T>::unaryExpr(const UNARY_FUNCTOR& unary) const
+    const Vector3d<T> Vector3d<T>::unaryExpr(UNARY_FUNCTOR&& unary) const
     {
-        auto copy = Point<T>(*this);
-        std::for_each(std::begin(copy.data), std::end(copy.data), unary);
+        Vector3d<T> copy(0);
+        std::transform(std::begin(data), std::end(data), std::begin(copy), unary);
         return copy;
     }
 
@@ -174,23 +182,15 @@ namespace enhance
 
     template<typename T>
     template<typename UNARY_FUNCTOR>
-    void Point<T>::unaryApply(const UNARY_FUNCTOR& unary)
+    void Vector3d<T>::unaryApply(UNARY_FUNCTOR&& unary)
     {
-        std::for_each(std::begin(data), std::end(data), unary);
+        std::transform(std::begin(data), std::end(data), std::begin(data), unary);
     }
 
 
 
     template<typename T>
-    T& Point<T>::operator[](std::size_t i)
-    {
-        return data[i];
-    }
-    
-
-
-    template<typename T>
-    constexpr T Point<T>::operator[](std::size_t i) const
+    T& Vector3d<T>::operator[](std::size_t i)
     {
         return data[i];
     }
@@ -198,7 +198,7 @@ namespace enhance
 
 
     template<typename T>
-    T& Point<T>::operator()(std::size_t i) 
+    constexpr T Vector3d<T>::operator[](std::size_t i) const
     {
         return data[i];
     }
@@ -206,7 +206,15 @@ namespace enhance
 
 
     template<typename T>
-    constexpr T Point<T>::operator()(std::size_t i) const
+    T& Vector3d<T>::operator()(std::size_t i) 
+    {
+        return data[i];
+    }
+    
+
+
+    template<typename T>
+    constexpr T Vector3d<T>::operator()(std::size_t i) const
     {
         return data[i];
     }
@@ -215,9 +223,9 @@ namespace enhance
 
     template<typename T>
     template<typename U>
-    const Point<T> Point<T>::operator+(const Point<U>& other) const
+    const Vector3d<T> Vector3d<T>::operator+(const Vector3d<U>& other) const
     {
-        Point<T> copy(0);
+        Vector3d<T> copy(0);
         std::transform(std::begin(data), std::end(data), std::begin(other.data), std::begin(copy.data), std::plus<T>());
         return copy;
     }
@@ -226,9 +234,9 @@ namespace enhance
 
     template<typename T>
     template<typename U>
-    const Point<T> Point<T>::operator-(const Point<U>& other) const
+    const Vector3d<T> Vector3d<T>::operator-(const Vector3d<U>& other) const
     {
-        Point<T> copy(0);
+        Vector3d<T> copy(0);
         std::transform(std::begin(data), std::end(data), std::begin(other.data), std::begin(copy.data), std::minus<T>());
         return copy;
     }
@@ -236,9 +244,9 @@ namespace enhance
 
 
     template<typename T>
-    const Point<T> Point<T>::operator-() const
+    const Vector3d<T> Vector3d<T>::operator-() const
     {
-        Point<T> copy = *this;
+        Vector3d<T> copy = *this;
         std::transform(std::begin(data), std::end(data), std::begin(copy.data), std::negate<T>());
         return copy;
     }
@@ -247,7 +255,7 @@ namespace enhance
 
     template<typename T>
     template<typename U>
-    Point<T>& Point<T>::operator+=(const Point<U>& other)
+    Vector3d<T>& Vector3d<T>::operator+=(const Vector3d<U>& other)
     {
         *this = *this + other;
         return *this;
@@ -257,7 +265,7 @@ namespace enhance
 
     template<typename T>
     template<typename U>
-    Point<T>& Point<T>::operator-=(const Point<U>& other)
+    Vector3d<T>& Vector3d<T>::operator-=(const Vector3d<U>& other)
     {
         *this = *this - other;
         return *this;
@@ -266,7 +274,7 @@ namespace enhance
 
 
     template<typename T>
-    float Point<T>::norm() const
+    float Vector3d<T>::norm() const
     {
         return std::sqrt(std::inner_product(std::begin(data), std::end(data), std::begin(data), float(0)));
     }
@@ -274,7 +282,7 @@ namespace enhance
 
 
     template<typename T>
-    void Point<T>::normalize()
+    void Vector3d<T>::normalize()
     {
         const T norm_ = norm();
         std::transform(std::begin(data), std::end(data), std::begin(data), [&norm_](T element){ return element/norm_; } );
@@ -283,9 +291,9 @@ namespace enhance
 
 
     template<typename T>
-    Point<T> Point<T>::normalized() const
+    Vector3d<T> Vector3d<T>::normalized() const
     {
-        auto copy = Point<T>(*this);
+        auto copy = Vector3d<T>(*this);
         copy.normalize();
         return copy;
     }
@@ -294,7 +302,7 @@ namespace enhance
 
     template<typename T>
     template<typename U>
-    T Point<T>::dot(const Point<U>& other) const
+    T Vector3d<T>::dot(const Vector3d<U>& other) const
     {
         return std::inner_product(std::begin(data), std::end(data), std::begin(other.data), static_cast<T>(0.0));
     }
@@ -303,9 +311,9 @@ namespace enhance
 
     template<typename T>
     template<typename U>
-    Point<T> Point<T>::cross(const Point<U>& other) const
+    Vector3d<T> Vector3d<T>::cross(const Vector3d<U>& other) const
     {
-        return Point<T>(
+        return Vector3d<T>(
             data[1]*other[2] - data[2]*other[1],
             data[2]*other[0] - data[0]*other[2],
             data[0]*other[1] - data[1]*other[0]
@@ -318,7 +326,7 @@ namespace enhance
 namespace std
 {
     template<class T>
-    constexpr void swap( enhance::Point<T>& lhs, enhance::Point<T>& rhs ) noexcept(noexcept(lhs.swap(rhs)))
+    constexpr void swap( enhance::Vector3d<T>& lhs, enhance::Vector3d<T>& rhs ) noexcept(noexcept(lhs.swap(rhs)))
     {
         lhs.swap(rhs);
     }
